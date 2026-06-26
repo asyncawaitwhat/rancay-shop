@@ -10,8 +10,8 @@
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
     "pages:build": "npx @cloudflare/next-on-pages",
-    "pages:preview": "npm run pages:build && npx wrangler pages dev",
-    "pages:deploy": "npm run pages:build && npx wrangler pages deploy"
+    "pages:preview": "npm run pages:build && npx wrangler pages dev .vercel/output/static --compatibility-flags=nodejs_compat --compatibility-date=2024-09-23",
+    "pages:deploy": "npm run pages:build && npx wrangler pages deploy .vercel/output/static --compatibility-flags=nodejs_compat --compatibility-date=2024-09-23"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

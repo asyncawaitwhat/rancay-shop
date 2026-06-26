@@ -223,9 +223,14 @@ Key facts:
   Next ≥14.3; we're on 14.2).
 - `src/app/(app)/layout.tsx` has `export const runtime = "edge"` so all dynamic
   routes are Edge-compatible. Any NEW server route must also be edge.
-- `wrangler.toml` sets `nodejs_compat` + `pages_build_output_dir = .vercel/output/static`.
+- **No `wrangler.toml` on purpose** — if present, Cloudflare locks the project into
+  config-as-code mode and the dashboard won't let you add plain env vars. So
+  `nodejs_compat` + compatibility date are set in the dashboard
+  (Settings → Runtime → Compatibility flags, Production + Preview), and the build
+  output dir (`.vercel/output/static`) is set in the dashboard build config.
 - Pages build command: `npx @cloudflare/next-on-pages@1.13.12`, output `.vercel/output/static`.
-- `NEXT_PUBLIC_FIREBASE_*` must be set as **build-time** env vars in the Pages project.
+- `NEXT_PUBLIC_FIREBASE_*` must be set as **build-time** env vars in the Pages project
+  dashboard (Variables and Secrets).
 - The adapter build does NOT run on Windows (`spawn npx ENOENT`) — build on Cloudflare
   (Git integration) or in WSL/Linux. Plain `next build` works on Windows for verification.
 - **After deploy:** add the `*.pages.dev` domain to Firebase → Authentication →

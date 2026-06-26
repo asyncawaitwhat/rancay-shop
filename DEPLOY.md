@@ -17,7 +17,14 @@ Cloudflare Workers/Edge runtime; static assets are served directly.
   `pages:preview`, `pages:deploy`).
 - `export const runtime = "edge"` on `src/app/(app)/layout.tsx` so every
   authenticated/dynamic route is Edge-compatible.
-- `wrangler.toml` with the required `nodejs_compat` flag and the build output dir.
+
+> There is intentionally **no `wrangler.toml`**. If that file exists, Cloudflare
+> locks the project into "config-as-code" mode and you can no longer add plain
+> environment variables in the dashboard (you'd see: *"Environment variables for
+> this project are being managed through wrangler.toml. Only Secrets can be managed
+> via the Dashboard."*). Without it, you manage everything in the dashboard. The
+> two things it used to provide — the `nodejs_compat` flag and the build output dir —
+> are set in the dashboard (steps below).
 
 ---
 
@@ -36,10 +43,13 @@ Create a new GitHub repo and push this folder to it. Do **not** commit `.env.loc
    - **Build command:** `npx @cloudflare/next-on-pages@1.13.12`
    - **Build output directory:** `.vercel/output/static`
 
-### 3. Add environment variables (Build + Runtime)
-In the Pages project → **Settings → Environment variables**, add these for the
-**Production** environment (and Preview if you want preview deploys). They must be
-present at **build time** because `NEXT_PUBLIC_*` values are baked into the bundle:
+### 3. Add environment variables
+In the Pages project → **Settings → Variables and Secrets** (or **Environment
+variables**), add these for the **Production** environment (and Preview if you want
+preview deploys). They must be present at **build time** because `NEXT_PUBLIC_*`
+values are baked into the bundle. (If the dashboard says variables are managed via
+`wrangler.toml`, that file must NOT be in your repo — it has been removed from this
+project for exactly this reason.)
 
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY            = (from Firebase)
@@ -54,11 +64,12 @@ NODE_VERSION                            = 20
 > Do **not** add `FIREBASE_SERVICE_ACCOUNT_PATH` — that's only for the local seed
 > script and must never be deployed.
 
-### 4. Enable the Node.js compatibility flag
-The included `wrangler.toml` already sets `nodejs_compat`. If a build/runtime error
-mentions Node compatibility, also set it in the dashboard:
-**Settings → Functions → Compatibility flags** → add `nodejs_compat` to **both**
-Production and Preview, with a **Compatibility date** of `2024-09-23` or later.
+### 4. Enable the Node.js compatibility flag (REQUIRED)
+`@cloudflare/next-on-pages` needs the Node.js compatibility flag at runtime. In the
+dashboard: **Settings → Runtime → Compatibility flags** (older UI: Settings →
+Functions) → add `nodejs_compat` to **both** Production and Preview, and set the
+**Compatibility date** to `2024-09-23` or later. Redeploy after changing this.
+If the site loads blank or Functions error after deploy, this flag is the usual cause.
 
 ### 5. Deploy
 Click **Save and Deploy**. Cloudflare builds on Linux and publishes to
@@ -75,8 +86,10 @@ From a Linux-like shell (NOT Windows CMD/PowerShell):
 npm install
 npx @cloudflare/next-on-pages@1.13.12      # builds to .vercel/output/static
 npx wrangler login                          # opens browser once
-npx wrangler pages deploy                   # uses wrangler.toml output dir
+npx wrangler pages deploy .vercel/output/static \
+  --compatibility-flags=nodejs_compat --compatibility-date=2024-09-23
 ```
+(The `pages:deploy` npm script already includes these flags.)
 
 On Windows, run the same inside **WSL** (`wsl` then `cd /mnt/c/Users/.../rancay-shop`).
 
@@ -113,7 +126,8 @@ npm run seed
 - [ ] Pages build command = `npx @cloudflare/next-on-pages@1.13.12`,
       output dir = `.vercel/output/static`.
 - [ ] All six `NEXT_PUBLIC_FIREBASE_*` vars + `NODE_VERSION=20` set in Pages.
-- [ ] `nodejs_compat` flag enabled (wrangler.toml covers it; dashboard as fallback).
+- [ ] `nodejs_compat` flag enabled in the dashboard (Production + Preview).
+- [ ] No `wrangler.toml` in the repo (so the dashboard can manage variables).
 - [ ] First deploy succeeded → site loads at `*.pages.dev`.
 - [ ] `*.pages.dev` (and custom domain) added to Firebase **Authorized domains**.
 - [ ] Firestore rules/indexes deployed; database seeded.
@@ -132,5 +146,13 @@ npm run seed
   that any new server route you add also uses `export const runtime = "edge"`.
 - **Node compatibility error at runtime** → confirm `nodejs_compat` is enabled for
   the environment you're hitting (Production vs Preview).
-- **Adapter fails locally on Windows (`spawn npx ENOENT`)** → expected; build on
-  Cloudflare (Method A) or in WSL (Method B).
+- **"Environment variables are being managed through wrangler.toml. Only Secrets can
+  be managed via the Dashboard."** → there is a `wrangler.toml` in your repo. Delete
+  it (`git rm wrangler.toml && git commit && git push`) and redeploy; the dashboard
+  variable UI then unlocks. (It has already been removed from this project.)
+- **Adapter fails locally on Windows or WSL (`spawn npx ENOENT`, plus a "you're on a
+  Windows system" warning)** → your shell is using **Windows' Node** (even inside WSL,
+  via `/mnt/c` on PATH). Don't build locally — deploy via Cloudflare's Git integration
+  (Method A), which builds on Linux. To build locally anyway, install a native Linux
+  Node in WSL (nvm) so `which node` is under your Linux home, then reinstall
+  `node_modules` and rebuild.
