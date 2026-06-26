@@ -12,3 +12,5 @@ serviceAccount*.json
 .vercel
 .wrangler
 next-env.d.ts
+
+.idea
