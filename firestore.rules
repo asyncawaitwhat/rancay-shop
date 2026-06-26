@@ -1,0 +1,117 @@
+rules_version = '2';
+
+// Firestore security rules for the Clothes Store Management System.
+//
+// Model: this is an internal back-office admin tool. Every authenticated user is
+// a staff member with a profile in /users and a role in /roles. Fine-grained,
+// per-screen permission enforcement happens in the app via the PermissionProvider
+// (role.permissions matrix). These rules provide the security backbone:
+//   - No access at all without authentication.
+//   - Users may always read their own profile.
+//   - Sensitive collections (roles, users, brandSettings) are writable only by
+//     users whose role grants "full" access to the matching screen.
+//   - auditLogs are append-only (no update/delete from clients).
+//
+// NOTE (documented limitation): because role permissions are stored in Firestore
+// and evaluated here via get(), a determined user with raw DB access is still
+// gated by these rules, but the rich per-action UX (view_only / edit / full) is
+// primarily enforced client-side. For maximum hardening, move write-heavy
+// operations behind Cloud Functions. This is acceptable for a trusted internal team.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function myRoleId() {
+      return myUser().role;
+    }
+
+    function myRole() {
+      return get(/databases/$(database)/documents/roles/$(myRoleId())).data;
+    }
+
+    function isActiveUser() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && myUser().status == 'active';
+    }
+
+    function isSuperAdmin() {
+      return isActiveUser() && myRole().isSuperAdmin == true;
+    }
+
+    // Returns true if the current user's role grants "full" access to `screen`.
+    function hasFull(screen) {
+      return isSuperAdmin()
+        || (isActiveUser() && myRole().permissions[screen] == 'full');
+    }
+
+    // Returns true for any access level other than no_access.
+    function canView(screen) {
+      return isSuperAdmin()
+        || (isActiveUser()
+            && myRole().permissions[screen] != null
+            && myRole().permissions[screen] != 'no_access');
+    }
+
+    // Users: read own profile always; admins (users screen full) manage all.
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || canView('users'));
+      allow write: if hasFull('users');
+    }
+
+    // Roles & permissions: only users with full access to the roles screen.
+    match /roles/{roleId} {
+      allow read: if isActiveUser();
+      allow write: if hasFull('roles');
+    }
+    match /permissions/{docId} {
+      allow read: if isActiveUser();
+      allow write: if hasFull('roles');
+    }
+
+    // Brand settings: readable by any active user (used in PDFs/header);
+    // writable only by users with full access to the brand screen.
+    match /brandSettings/{docId} {
+      allow read: if isActiveUser();
+      allow write: if hasFull('brand');
+    }
+
+    // Audit logs: readable by users who can view the audit screen; append-only.
+    match /auditLogs/{logId} {
+      allow read: if canView('audit');
+      allow create: if isActiveUser();
+      allow update, delete: if false;
+    }
+
+    // Sequences: any active user may run number-generating transactions.
+    match /sequences/{seqId} {
+      allow read, write: if isActiveUser();
+    }
+
+    // Core business collections: any active staff member may read/write.
+    // Per-action gating (view/create/edit/delete) is enforced in the UI.
+    match /clients/{id}        { allow read, write: if isActiveUser(); }
+    match /categories/{id}     { allow read, write: if isActiveUser(); }
+    match /products/{id}       { allow read, write: if isActiveUser(); }
+    match /stockMovements/{id} { allow read, write: if isActiveUser(); }
+    match /salesInvoices/{id}  { allow read, write: if isActiveUser(); }
+    match /returnInvoices/{id} { allow read, write: if isActiveUser(); }
+    match /vaults/{id}         { allow read, write: if isActiveUser(); }
+    match /financeTransactions/{id} { allow read, write: if isActiveUser(); }
+    match /expenseSlips/{id}   { allow read, write: if isActiveUser(); }
+    match /receiptSlips/{id}   { allow read, write: if isActiveUser(); }
+
+    // Default deny for anything not matched above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

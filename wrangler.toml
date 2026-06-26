@@ -1,0 +1,10 @@
+# Cloudflare Pages configuration for the Clothes Store Management System.
+# Used by `wrangler pages dev` (local preview) and `wrangler pages deploy`.
+name = "rancay-shop"
+compatibility_date = "2024-09-23"
+
+# Firebase and the Next.js runtime need Node.js built-ins on the Workers runtime.
+compatibility_flags = ["nodejs_compat"]
+
+# @cloudflare/next-on-pages writes the deployable site here.
+pages_build_output_dir = ".vercel/output/static"
