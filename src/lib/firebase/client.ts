@@ -29,6 +29,20 @@ export const isFirebaseConfigured = Boolean(
     firebaseConfig.appId
 );
 
+/**
+ * Per-variable presence, evaluated at BUILD time (NEXT_PUBLIC_* values are inlined
+ * by Next during the build). Used by the setup screen to show exactly which
+ * variables were missing when the bundle was built — the usual deploy gotcha.
+ */
+export const firebaseEnvStatus: { key: string; present: boolean; required: boolean }[] = [
+  { key: "NEXT_PUBLIC_FIREBASE_API_KEY", present: !!firebaseConfig.apiKey, required: true },
+  { key: "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN", present: !!firebaseConfig.authDomain, required: true },
+  { key: "NEXT_PUBLIC_FIREBASE_PROJECT_ID", present: !!firebaseConfig.projectId, required: true },
+  { key: "NEXT_PUBLIC_FIREBASE_APP_ID", present: !!firebaseConfig.appId, required: true },
+  { key: "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID", present: !!firebaseConfig.messagingSenderId, required: false },
+  { key: "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET", present: !!firebaseConfig.storageBucket, required: false },
+];
+
 let app: FirebaseApp | undefined;
 let authInstance: Auth | undefined;
 let dbInstance: Firestore | undefined;

@@ -8,6 +8,7 @@ import { Header } from "./header";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useLang } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
+import { FirebaseSetupNotice } from "@/components/shared/firebase-setup-notice";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { configured, loading, user, profileError, signOut } = useAuth();
@@ -81,25 +82,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 function SetupScreen() {
-  const { t } = useLang();
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
-      <div className="max-w-lg rounded-xl border bg-background p-8 shadow-sm">
-        <div className="mb-4 flex items-center gap-3">
-          <AlertTriangle className="h-8 w-8 text-amber-500" />
-          <h1 className="text-xl font-bold">{t("setup.title")}</h1>
-        </div>
-        <p className="mb-4 text-muted-foreground">{t("setup.body")}</p>
-        <pre className="overflow-x-auto rounded-lg bg-muted p-4 text-xs">
-{`NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=`}
-        </pre>
-        <p className="mt-4 text-sm text-muted-foreground">{t("setup.readme")}</p>
-      </div>
+      <FirebaseSetupNotice />
     </div>
   );
 }

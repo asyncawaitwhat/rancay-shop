@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { FirebaseSetupNotice } from "@/components/shared/firebase-setup-notice";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useLang } from "@/components/providers/language-provider";
 import { signIn, authErrorMessage } from "@/lib/firebase/auth";
@@ -47,12 +48,7 @@ export default function LoginPage() {
   if (!configured) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
-        <Card className="max-w-lg">
-          <CardContent className="p-8">
-            <h1 className="mb-2 text-xl font-bold">{t("setup.title")}</h1>
-            <p className="text-muted-foreground">{t("setup.body")}</p>
-          </CardContent>
-        </Card>
+        <FirebaseSetupNotice />
       </div>
     );
   }
