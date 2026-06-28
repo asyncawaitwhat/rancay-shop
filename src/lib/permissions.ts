@@ -12,6 +12,7 @@ export const SCREENS: { key: ScreenKey; labelKey: string }[] = [
   { key: "categories", labelKey: "nav.categories" },
   { key: "inventory", labelKey: "nav.inventory" },
   { key: "sales", labelKey: "nav.sales" },
+  { key: "salesReps", labelKey: "nav.salesReps" },
   { key: "returns", labelKey: "nav.returns" },
   { key: "vaults", labelKey: "nav.vaults" },
   { key: "transactions", labelKey: "nav.transactions" },
@@ -22,6 +23,7 @@ export const SCREENS: { key: ScreenKey; labelKey: string }[] = [
   { key: "users", labelKey: "nav.users" },
   { key: "roles", labelKey: "nav.roles" },
   { key: "audit", labelKey: "nav.audit" },
+  { key: "whatsapp", labelKey: "nav.whatsapp" },
 ];
 
 export const PERMISSION_LEVELS: PermissionLevel[] = [

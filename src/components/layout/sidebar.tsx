@@ -19,6 +19,8 @@ import {
   UserCog,
   ShieldCheck,
   ScrollText,
+  MessageCircle,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 import { NAV_GROUPS } from "@/lib/nav";
@@ -30,6 +32,7 @@ import { cn } from "@/lib/utils";
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard, Users, Shirt, Tags, Boxes, ReceiptText, Undo2, Wallet,
   ArrowLeftRight, TrendingDown, TrendingUp, BarChart3, Store, UserCog, ShieldCheck, ScrollText,
+  MessageCircle, UserCheck,
 };
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {

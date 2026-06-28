@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm --version)"
+      "Bash(npm --version)",
+      "PowerShell(npm run *)",
+      "PowerShell($p = Get-Process node -ErrorAction SilentlyContinue; if \\($p\\) { \"build still running: $\\($p.Count\\) node proc\\(s\\)\" } else { \"no node process\" })"
     ]
   }
 }

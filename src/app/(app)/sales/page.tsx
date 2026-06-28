@@ -16,9 +16,11 @@ import { Money } from "@/components/shared/money";
 import { Pagination, usePagination } from "@/components/shared/pagination";
 import { useLang } from "@/components/providers/language-provider";
 import { usePermissions } from "@/components/providers/permission-provider";
+import { useAuth } from "@/components/providers/auth-provider";
 import { listSalesInvoices } from "@/lib/firebase/services/invoices";
+import { listSalesReps } from "@/lib/firebase/services/salesReps";
 import { formatDate } from "@/lib/utils";
-import type { SalesInvoice } from "@/lib/types";
+import type { SalesInvoice, SalesRep } from "@/lib/types";
 
 export default function SalesPage() {
   return (
@@ -31,18 +33,34 @@ export default function SalesPage() {
 function SalesContent() {
   const { t, name } = useLang();
   const { can } = usePermissions();
+  const { user, role } = useAuth();
   const [items, setItems] = useState<SalesInvoice[]>([]);
+  const [reps, setReps] = useState<SalesRep[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [repFilter, setRepFilter] = useState("all");
 
   useEffect(() => {
-    listSalesInvoices().then(setItems).finally(() => setLoading(false));
+    Promise.all([listSalesInvoices(), listSalesReps().catch(() => [] as SalesRep[])])
+      .then(([inv, r]) => { setItems(inv); setReps(r); })
+      .finally(() => setLoading(false));
   }, []);
+
+  // If the logged-in user IS a sales rep (a rep record is linked to their user)
+  // and they are not a super admin, they only ever see their own invoices.
+  const myRep = user ? reps.find((r) => r.userId === user.id) : undefined;
+  const restrictedToRep = myRep && !role?.isSuperAdmin ? myRep.id : null;
 
   const filtered = items.filter((i) => {
     const s = `${i.invoiceNumber} ${i.clientEnglishName} ${i.clientArabicName}`.toLowerCase();
-    return s.includes(search.toLowerCase()) && (statusFilter === "all" || i.status === statusFilter);
+    if (!s.includes(search.toLowerCase())) return false;
+    if (statusFilter !== "all" && i.status !== statusFilter) return false;
+    if (restrictedToRep) return i.salesRepId === restrictedToRep;
+    if (repFilter !== "all") {
+      return repFilter === "none" ? !i.salesRepId : i.salesRepId === repFilter;
+    }
+    return true;
   });
   const { paged, page, setPage, pageCount, total } = usePagination(filtered, 12);
 
@@ -69,6 +87,21 @@ function SalesContent() {
               <SelectItem value="cancelled">{t("invoice.cancelled")}</SelectItem>
             </SelectContent>
           </Select>
+          {!restrictedToRep && reps.length > 0 && (
+            <Select value={repFilter} onValueChange={setRepFilter}>
+              <SelectTrigger className="w-48"><SelectValue placeholder={t("invoice.salesRep")} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("invoice.salesRep")}: {t("common.all")}</SelectItem>
+                <SelectItem value="none">{t("salesRep.none")}</SelectItem>
+                {reps.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>{name(r.englishName, r.arabicName)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {restrictedToRep && (
+            <Badge variant="secondary">{t("invoice.myInvoicesOnly")}</Badge>
+          )}
         </div>
         {loading ? <LoadingState /> : filtered.length === 0 ? <EmptyState /> : (
           <>
@@ -77,6 +110,7 @@ function SalesContent() {
                 <TableHead>{t("invoice.number")}</TableHead>
                 <TableHead>{t("common.date")}</TableHead>
                 <TableHead>{t("common.client")}</TableHead>
+                <TableHead>{t("invoice.salesRep")}</TableHead>
                 <TableHead>{t("invoice.grandTotal")}</TableHead>
                 <TableHead>{t("invoice.paymentStatus")}</TableHead>
                 <TableHead>{t("invoice.status")}</TableHead>
@@ -87,6 +121,9 @@ function SalesContent() {
                   <TableCell className="font-mono text-xs">{i.invoiceNumber}</TableCell>
                   <TableCell>{formatDate(i.invoiceDate)}</TableCell>
                   <TableCell>{name(i.clientEnglishName, i.clientArabicName)}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {i.salesRepId ? name(i.salesRepEnglishName || "", i.salesRepArabicName || "") : "—"}
+                  </TableCell>
                   <TableCell><Money value={i.grandTotal} /></TableCell>
                   <TableCell><Badge variant={i.paymentStatus === "paid" ? "success" : i.paymentStatus === "partial" ? "warning" : "secondary"}>{t(`invoice.${i.paymentStatus}`)}</Badge></TableCell>
                   <TableCell><Badge variant={i.status === "posted" ? "success" : i.status === "cancelled" ? "destructive" : "secondary"}>{t(`invoice.${i.status}`)}</Badge></TableCell>

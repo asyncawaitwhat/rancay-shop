@@ -21,13 +21,14 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { listClients } from "@/lib/firebase/services/clients";
 import { listProducts } from "@/lib/firebase/services/products";
 import { listVaults } from "@/lib/firebase/services/vaults";
+import { listActiveSalesReps } from "@/lib/firebase/services/salesReps";
 import {
   getSalesInvoice, createDraftInvoice, updateDraftInvoice, postInvoice,
 } from "@/lib/firebase/services/invoices";
 import { salesInvoiceSchema } from "@/lib/schemas";
 import { computeTotals, type RawLine } from "@/lib/invoice-math";
 import { toISODateInput, formatMoney } from "@/lib/utils";
-import type { Client, Product, Vault, DiscountType } from "@/lib/types";
+import type { Client, Product, Vault, SalesRep, DiscountType } from "@/lib/types";
 
 export default function NewSalesPage() {
   return (
@@ -47,11 +48,13 @@ function SalesEditor() {
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [vaults, setVaults] = useState<Vault[]>([]);
+  const [salesReps, setSalesReps] = useState<SalesRep[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [confirmPost, setConfirmPost] = useState(false);
 
   const [clientId, setClientId] = useState("");
+  const [salesRepId, setSalesRepId] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(toISODateInput(new Date()));
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<RawLine[]>([]);
@@ -61,15 +64,17 @@ function SalesEditor() {
   const [vaultId, setVaultId] = useState("");
 
   useEffect(() => {
-    Promise.all([listClients(), listProducts(), listVaults()])
-      .then(async ([c, p, v]) => {
+    Promise.all([listClients(), listProducts(), listVaults(), listActiveSalesReps()])
+      .then(async ([c, p, v, reps]) => {
         setClients(c.filter((x) => x.status === "active"));
         setProducts(p);
         setVaults(v.filter((x) => x.status === "active"));
+        setSalesReps(reps);
         if (editId) {
           const inv = await getSalesInvoice(editId);
           if (inv && inv.status === "draft") {
             setClientId(inv.clientId);
+            setSalesRepId(inv.salesRepId || "");
             setInvoiceDate(toISODateInput(inv.invoiceDate));
             setNotes(inv.notes || "");
             setLines(inv.lines.map((l) => ({
@@ -93,9 +98,15 @@ function SalesEditor() {
   const totals = computeTotals(lines, invoiceDiscountType, invoiceDiscountValue);
   const remaining = Math.max(0, totals.grandTotal - paidAmount);
 
+  const salesRep = salesReps.find((r) => r.id === salesRepId);
+
   function buildForm(status: "draft" | "posted") {
     return {
-      invoiceDate, clientId, notes, lines, invoiceDiscountType, invoiceDiscountValue,
+      invoiceDate, clientId,
+      salesRepId,
+      salesRepEnglishName: salesRep?.englishName || "",
+      salesRepArabicName: salesRep?.arabicName || "",
+      notes, lines, invoiceDiscountType, invoiceDiscountValue,
       paidAmount, vaultId, status,
     };
   }
@@ -189,6 +200,14 @@ function SalesEditor() {
               </Field>
               <Field label={t("invoice.date")} required>
                 <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} dir="ltr" />
+              </Field>
+              <Field label={t("invoice.salesRep")}>
+                <EntityCombobox
+                  items={salesReps.map((r) => ({ id: r.id, label: name(r.englishName, r.arabicName), sublabel: r.repCode }))}
+                  value={salesRepId}
+                  onSelect={setSalesRepId}
+                  placeholder={t("invoice.selectSalesRep")}
+                />
               </Field>
             </div>
             <LineItemsEditor products={products} lines={lines} onChange={setLines} checkStock />

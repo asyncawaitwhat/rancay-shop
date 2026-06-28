@@ -27,6 +27,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { screen: "categories", href: "/categories", labelKey: "nav.categories", icon: "Tags" },
       { screen: "inventory", href: "/inventory", labelKey: "nav.inventory", icon: "Boxes" },
       { screen: "sales", href: "/sales", labelKey: "nav.sales", icon: "ReceiptText" },
+      { screen: "salesReps", href: "/sales-reps", labelKey: "nav.salesReps", icon: "UserCheck" },
       { screen: "returns", href: "/returns", labelKey: "nav.returns", icon: "Undo2" },
     ],
   },
@@ -44,6 +45,7 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "nav.group.admin",
     items: [
       { screen: "brand", href: "/brand", labelKey: "nav.brand", icon: "Store" },
+      { screen: "whatsapp", href: "/whatsapp", labelKey: "nav.whatsapp", icon: "MessageCircle" },
       { screen: "users", href: "/users", labelKey: "nav.users", icon: "UserCog" },
       { screen: "roles", href: "/roles", labelKey: "nav.roles", icon: "ShieldCheck" },
       { screen: "audit", href: "/audit", labelKey: "nav.audit", icon: "ScrollText" },

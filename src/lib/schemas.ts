@@ -67,9 +67,23 @@ export const invoiceLineSchema = z.object({
   discountValue: z.coerce.number().min(0, "Discount must be 0 or more"),
 });
 
+export const salesRepSchema = z.object({
+  englishName: z.string().min(1, reqEn),
+  arabicName: z.string().min(1, reqAr),
+  phone: z.string().optional().or(z.literal("")),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
+  userId: z.string().optional().or(z.literal("")),
+  status: statusEnum,
+  notes: z.string().optional().or(z.literal("")),
+});
+export type SalesRepForm = z.infer<typeof salesRepSchema>;
+
 export const salesInvoiceSchema = z.object({
   invoiceDate: z.string().min(1, "Date is required"),
   clientId: z.string().min(1, "Client is required"),
+  salesRepId: z.string().optional().or(z.literal("")),
+  salesRepEnglishName: z.string().optional().or(z.literal("")),
+  salesRepArabicName: z.string().optional().or(z.literal("")),
   notes: z.string().optional().or(z.literal("")),
   lines: z.array(invoiceLineSchema).min(1, "Add at least one product"),
   invoiceDiscountType: discountTypeEnum,

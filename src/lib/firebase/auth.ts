@@ -2,6 +2,8 @@ import {
   signInWithEmailAndPassword,
   signOut as fbSignOut,
   onAuthStateChanged,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   type User as FirebaseUser,
 } from "firebase/auth";
 import { getFirebaseAuth } from "./client";
@@ -14,6 +16,20 @@ export async function signIn(email: string, password: string) {
   const auth = getFirebaseAuth();
   const cred = await signInWithEmailAndPassword(auth, email, password);
   return cred.user;
+}
+
+/**
+ * Re-verify the currently signed-in user's password. Used to gate destructive
+ * actions (e.g. resetting all data). Throws on wrong password / no session.
+ */
+export async function reauthenticate(password: string): Promise<void> {
+  const auth = getFirebaseAuth();
+  const current = auth.currentUser;
+  if (!current || !current.email) {
+    throw new Error("No active session.");
+  }
+  const credential = EmailAuthProvider.credential(current.email, password);
+  await reauthenticateWithCredential(current, credential);
 }
 
 export async function signOut() {

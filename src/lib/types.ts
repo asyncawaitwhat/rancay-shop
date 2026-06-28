@@ -26,7 +26,9 @@ export type ScreenKey =
   | "brand"
   | "users"
   | "roles"
-  | "audit";
+  | "audit"
+  | "whatsapp"
+  | "salesReps";
 
 export type PermissionMatrix = Record<ScreenKey, PermissionLevel>;
 
@@ -120,6 +122,24 @@ export interface Product {
   updatedAt?: DateLike;
 }
 
+// ---------------------------------------------------------------------------
+// Sales reps
+// ---------------------------------------------------------------------------
+export interface SalesRep {
+  id: string;
+  repCode: string;
+  englishName: string;
+  arabicName: string;
+  phone?: string;
+  email?: string;
+  /** Optional link to a login user; that user then sees only their own invoices. */
+  userId?: string;
+  status: Status;
+  notes?: string;
+  createdAt?: DateLike;
+  updatedAt?: DateLike;
+}
+
 export type StockMovementType =
   | "sale"
   | "return"
@@ -175,6 +195,9 @@ export interface SalesInvoice {
   clientId: string;
   clientEnglishName: string;
   clientArabicName: string;
+  salesRepId?: string;
+  salesRepEnglishName?: string;
+  salesRepArabicName?: string;
   status: InvoiceStatus;
   notes?: string;
   lines: InvoiceLine[];
@@ -332,4 +355,92 @@ export interface AuditLog {
   beforeData?: string;
   afterData?: string;
   createdAt?: DateLike;
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp AI sales bot
+// ---------------------------------------------------------------------------
+
+/** Conversation status for a WhatsApp customer. */
+export type WhatsappSessionStatus = "active" | "human_handoff";
+
+export interface WhatsappSession {
+  id: string; // doc id == normalised phone number (digits only)
+  phone: string; // normalised, digits only (e.g. 9627...)
+  waId: string; // WhatsApp contact id as sent by Meta
+  profileName?: string;
+  language: "ar" | "en";
+  status: WhatsappSessionStatus;
+  activeCartId?: string;
+  customerId?: string; // linked ERP client id once known
+  /** Rolling short conversation memory (last few turns) for the AI. */
+  history?: { role: "user" | "assistant"; content: string }[];
+  lastMessageAt?: DateLike;
+  lastInboundText?: string;
+  handoffAt?: DateLike;
+  createdAt?: DateLike;
+  updatedAt?: DateLike;
+}
+
+export type WhatsappMessageDirection = "incoming" | "outgoing";
+
+export interface WhatsappMessage {
+  id: string; // doc id == WhatsApp message id (incoming) or generated (outgoing)
+  waMessageId: string;
+  direction: WhatsappMessageDirection;
+  phone: string;
+  type: string; // text | image | interactive | template | unsupported ...
+  text: string;
+  raw?: string; // JSON of the raw payload where useful
+  processed: boolean;
+  error?: string;
+  createdAt?: DateLike;
+}
+
+export type WhatsappCartStatus =
+  | "active"
+  | "pending_confirmation"
+  | "invoiced"
+  | "cancelled";
+
+export interface WhatsappCartItem {
+  productId: string;
+  productSku: string;
+  productEnglishName: string;
+  productArabicName: string;
+  quantity: number;
+  unitPrice: number; // from ERP only
+  lineTotal: number; // quantity * unitPrice (server computed)
+}
+
+export interface WhatsappCart {
+  id: string;
+  phone: string;
+  customerId?: string;
+  sessionId: string;
+  items: WhatsappCartItem[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  deliveryFee: number;
+  total: number;
+  status: WhatsappCartStatus;
+  invoiceNumber?: string;
+  createdAt?: DateLike;
+  updatedAt?: DateLike;
+}
+
+/** Bot configuration document (whatsappSettings/main). */
+export interface WhatsappSettings {
+  id: string;
+  botEnabled: boolean;
+  aiAutoReplyEnabled: boolean;
+  openaiModel: string;
+  defaultLanguage: "ar" | "en";
+  businessName?: string;
+  welcomeMessage?: string;
+  handoffContacts?: string; // free text: phones/emails for human follow-up
+  taxRate?: number; // percentage applied by backend, 0 = none
+  deliveryFee?: number; // flat delivery fee, 0 = none
+  updatedAt?: DateLike;
 }

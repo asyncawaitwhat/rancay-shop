@@ -100,6 +100,7 @@ service cloud.firestore {
     // Per-action gating (view/create/edit/delete) is enforced in the UI.
     match /clients/{id}        { allow read, write: if isActiveUser(); }
     match /categories/{id}     { allow read, write: if isActiveUser(); }
+    match /salesReps/{id}      { allow read, write: if isActiveUser(); }
     match /products/{id}       { allow read, write: if isActiveUser(); }
     match /stockMovements/{id} { allow read, write: if isActiveUser(); }
     match /salesInvoices/{id}  { allow read, write: if isActiveUser(); }
@@ -108,6 +109,28 @@ service cloud.firestore {
     match /financeTransactions/{id} { allow read, write: if isActiveUser(); }
     match /expenseSlips/{id}   { allow read, write: if isActiveUser(); }
     match /receiptSlips/{id}   { allow read, write: if isActiveUser(); }
+
+    // WhatsApp AI bot.
+    // The webhook writes via a service account (Firestore REST / Admin), which
+    // bypasses these rules entirely, so messages & carts are server-write-only.
+    // Staff may read everything from the WhatsApp screen; settings + sessions are
+    // editable in-app (toggle the bot, resume a human-handoff conversation).
+    match /whatsappSettings/{id} {
+      allow read: if isActiveUser();
+      allow write: if hasFull('whatsapp');
+    }
+    match /whatsappSessions/{id} {
+      allow read: if canView('whatsapp');
+      allow write: if hasFull('whatsapp');
+    }
+    match /whatsappMessages/{id} {
+      allow read: if canView('whatsapp');
+      allow write: if false;
+    }
+    match /whatsappCarts/{id} {
+      allow read: if canView('whatsapp');
+      allow write: if false;
+    }
 
     // Default deny for anything not matched above.
     match /{document=**} {
