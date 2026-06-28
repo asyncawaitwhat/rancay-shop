@@ -3,6 +3,8 @@
 Follow this checklist to connect the WhatsApp AI sales bot. Deep reference:
 [`docs/WHATSAPP_AI_BOT.md`](docs/WHATSAPP_AI_BOT.md).
 
+
+
 ---
 
 ## 0. What you need first
