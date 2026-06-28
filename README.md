@@ -12,6 +12,7 @@ directly inside Firestore documents**. No Firebase Storage, S3, or Cloudinary is
 
 ## 1. What you need
 
+
 - A free Google account (for Firebase).
 - [Node.js 18+](https://nodejs.org) installed on your computer.
 - About 15 minutes.
