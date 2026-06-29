@@ -103,6 +103,8 @@ async function run() {
   for (const r of Object.values(roles)) await db.collection("roles").doc(r.id).set(r.data);
   console.log("[seed] Roles created.");
 
+
+  
   // -------- 2. Super admin auth user + profile --------
   const email = "admin@store.com";
   const password = "Admin@123456";

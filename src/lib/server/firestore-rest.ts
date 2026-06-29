@@ -260,7 +260,10 @@ export async function adminGetDoc<T>(
 export async function adminHealthCheck(): Promise<{ ok: boolean; error?: string }> {
   try {
     await getAccessToken();
-    await api(`${basePath()}/__diagnostics__/__none__`);
+    // Read a real (possibly-missing) doc. A 404 returns null and still proves
+    // auth + project access. NB: collection/doc ids wrapped in double
+    // underscores are RESERVED by Firestore — don't use them here.
+    await api(`${basePath()}/whatsappSettings/healthcheck`);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
