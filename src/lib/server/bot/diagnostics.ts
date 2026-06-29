@@ -40,11 +40,30 @@ async function checkWhatsapp(): Promise<Check> {
 
 async function checkOpenAI(): Promise<Check> {
   const env = getBotEnv();
-  if (!env.openaiApiKey) return { ok: false, error: "OPENAI_API_KEY missing" };
+  if (!env.openaiApiKey) return { ok: false, error: "OPENAI_API_KEY not set" };
   try {
     const res = await fetch("https://api.openai.com/v1/models", {
       headers: { Authorization: `Bearer ${env.openaiApiKey}` },
     });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: { message?: string };
+      };
+      return { ok: false, error: data.error?.message || `HTTP ${res.status}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+async function checkGemini(): Promise<Check> {
+  const env = getBotEnv();
+  if (!env.geminiApiKey) return { ok: false, error: "GEMINI_API_KEY not set" };
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${env.geminiApiKey}`
+    );
     if (!res.ok) {
       const data = (await res.json().catch(() => ({}))) as {
         error?: { message?: string };
@@ -65,6 +84,7 @@ export interface Diagnostics {
   firestore: Check;
   whatsapp: Check;
   openai: Check;
+  gemini: Check;
   hint: string;
 }
 
@@ -79,6 +99,7 @@ export async function runDiagnostics(origin: string): Promise<Diagnostics> {
     { name: "WHATSAPP_VERIFY_TOKEN", present: present(env.whatsappVerifyToken) },
     { name: "WHATSAPP_APP_SECRET", present: present(env.whatsappAppSecret) },
     { name: "OPENAI_API_KEY", present: present(env.openaiApiKey) },
+    { name: "GEMINI_API_KEY", present: present(env.geminiApiKey) },
     { name: "FIREBASE_PROJECT_ID", present: present(env.firebaseProjectId) },
     { name: "FIREBASE_CLIENT_EMAIL", present: present(env.firebaseClientEmail) },
     { name: "FIREBASE_PRIVATE_KEY", present: present(env.firebasePrivateKey) },
@@ -86,16 +107,18 @@ export async function runDiagnostics(origin: string): Promise<Diagnostics> {
   ];
 
   // Only run live checks for things that are configured, to avoid noise.
-  const [firestore, whatsapp, openai] = await Promise.all([
+  const [firestore, whatsapp, openai, gemini] = await Promise.all([
     env.firebaseClientEmail && env.firebasePrivateKey
       ? adminHealthCheck()
       : Promise.resolve<Check>({ ok: false, error: "service account not configured" }),
     checkWhatsapp(),
     checkOpenAI(),
+    checkGemini(),
   ]);
 
-  const ok =
-    missingEnv.length === 0 && firestore.ok && whatsapp.ok && openai.ok;
+  // At least one AI provider must work; the bot uses whichever is selected.
+  const anyAi = openai.ok || gemini.ok;
+  const ok = missingEnv.length === 0 && firestore.ok && whatsapp.ok && anyAi;
 
   let hint = "All checks passed. If WhatsApp still doesn't reply, the issue is on Meta's side: make sure the webhook Callback URL points here, it is Verified, and the WhatsApp Business Account is subscribed to the 'messages' field.";
   if (missingEnv.length) {
@@ -104,8 +127,8 @@ export async function runDiagnostics(origin: string): Promise<Diagnostics> {
     hint = "Firestore admin auth failed — usually the FIREBASE_PRIVATE_KEY is malformed (keep the \\n escapes, wrap in quotes) or the service account is from a different project.";
   } else if (!whatsapp.ok) {
     hint = "WhatsApp token/phone-number-id check failed — the access token may be expired (generate a permanent System User token) or the phone number id is wrong.";
-  } else if (!openai.ok) {
-    hint = "OpenAI key check failed — the key is invalid, revoked, or the account has no quota.";
+  } else if (!anyAi) {
+    hint = "No AI provider is working. Set a valid OPENAI_API_KEY or GEMINI_API_KEY (whichever provider you selected on the WhatsApp Bot screen).";
   }
 
   return {
@@ -116,6 +139,7 @@ export async function runDiagnostics(origin: string): Promise<Diagnostics> {
     firestore,
     whatsapp,
     openai,
+    gemini,
     hint,
   };
 }

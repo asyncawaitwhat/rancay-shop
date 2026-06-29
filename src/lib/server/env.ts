@@ -15,8 +15,9 @@ export interface BotEnv {
   whatsappPhoneNumberId: string;
   whatsappVerifyToken: string;
   whatsappAppSecret: string;
-  // OpenAI
+  // AI providers
   openaiApiKey: string;
+  geminiApiKey: string;
   // Firebase Admin (service account) — used by the edge Firestore REST client
   firebaseProjectId: string;
   firebaseClientEmail: string;
@@ -74,6 +75,7 @@ export function getBotEnv(): BotEnv {
     whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "",
     whatsappAppSecret: process.env.WHATSAPP_APP_SECRET || "",
     openaiApiKey: process.env.OPENAI_API_KEY || "",
+    geminiApiKey: process.env.GEMINI_API_KEY || "",
     firebaseProjectId: projectId,
     firebaseClientEmail: clientEmail,
     firebasePrivateKey: normalisePrivateKey(privateKey),
@@ -88,12 +90,17 @@ export function validateBotEnv(env: BotEnv = getBotEnv()): string[] {
     WHATSAPP_PHONE_NUMBER_ID: env.whatsappPhoneNumberId,
     WHATSAPP_VERIFY_TOKEN: env.whatsappVerifyToken,
     WHATSAPP_APP_SECRET: env.whatsappAppSecret,
-    OPENAI_API_KEY: env.openaiApiKey,
     "FIREBASE_PROJECT_ID (or NEXT_PUBLIC_FIREBASE_PROJECT_ID)": env.firebaseProjectId,
     FIREBASE_CLIENT_EMAIL: env.firebaseClientEmail,
     FIREBASE_PRIVATE_KEY: env.firebasePrivateKey,
   };
-  return Object.entries(required)
+  const missing = Object.entries(required)
     .filter(([, v]) => !v)
     .map(([k]) => k);
+  // At least ONE AI provider key must be present; the bot's configured provider
+  // is checked at request time (see orchestrator).
+  if (!env.openaiApiKey && !env.geminiApiKey) {
+    missing.push("OPENAI_API_KEY or GEMINI_API_KEY");
+  }
+  return missing;
 }

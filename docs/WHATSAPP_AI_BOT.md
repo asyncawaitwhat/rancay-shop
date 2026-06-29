@@ -98,7 +98,8 @@ Variables and Secrets), never as `NEXT_PUBLIC_*`. See `.env.example`.
 | `WHATSAPP_PHONE_NUMBER_ID` | Phone number ID from the API setup |
 | `WHATSAPP_VERIFY_TOKEN` | Random string; must match Meta's webhook config |
 | `WHATSAPP_APP_SECRET` | App secret; verifies `X-Hub-Signature-256` |
-| `OPENAI_API_KEY` | OpenAI API key |
+| `OPENAI_API_KEY` | OpenAI API key (needed if provider = OpenAI) |
+| `GEMINI_API_KEY` | Google Gemini API key (needed if provider = Gemini) |
 | `FIREBASE_PROJECT_ID` | Firebase project id (falls back to `NEXT_PUBLIC_FIREBASE_PROJECT_ID`) |
 | `FIREBASE_CLIENT_EMAIL` | Service-account email |
 | `FIREBASE_PRIVATE_KEY` | Service-account private key (keep `\n` escapes, wrap in quotes) |

@@ -430,12 +430,17 @@ export interface WhatsappCart {
   updatedAt?: DateLike;
 }
 
+export type AiProvider = "openai" | "gemini";
+
 /** Bot configuration document (whatsappSettings/main). */
 export interface WhatsappSettings {
   id: string;
   botEnabled: boolean;
   aiAutoReplyEnabled: boolean;
+  /** Which AI provider powers the assistant. */
+  aiProvider: AiProvider;
   openaiModel: string;
+  geminiModel: string;
   defaultLanguage: "ar" | "en";
   businessName?: string;
   welcomeMessage?: string;

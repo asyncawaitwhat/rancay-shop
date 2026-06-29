@@ -42,7 +42,11 @@ WHATSAPP_TOKEN=...
 WHATSAPP_PHONE_NUMBER_ID=...
 WHATSAPP_VERIFY_TOKEN=...            # the random string from step 2
 WHATSAPP_APP_SECRET=...
-OPENAI_API_KEY=...
+
+# AI provider — set the key for whichever you pick on the WhatsApp Bot screen
+# (at least one required; set both to switch freely in the UI):
+OPENAI_API_KEY=...                   # https://platform.openai.com/api-keys
+GEMINI_API_KEY=...                   # https://aistudio.google.com/app/apikey
 
 # Firebase service account (same JSON as seeding):
 FIREBASE_PROJECT_ID=...
@@ -85,7 +89,9 @@ firebase deploy --only firestore:rules
 1. Log in to the ERP → sidebar **Administration → WhatsApp Bot**.
 2. Confirm the **Webhook URL** shown matches what you put in Meta.
 3. Set **Bot enabled** ✓ and **AI auto-reply enabled** ✓.
-4. Pick the **OpenAI model** (default `gpt-4o-mini`), default language, business
+4. Pick the **AI provider** (OpenAI or Google Gemini) and its model
+   (defaults: `gpt-4o-mini` / `gemini-2.0-flash`) — make sure that provider's
+   API key is set in the env vars above. Then set default language, business
    name, optional welcome message, and human-handoff contacts. **Save**.
 
 ## 8. Test it

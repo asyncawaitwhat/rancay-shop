@@ -30,7 +30,9 @@ export const WHATSAPP_SETTINGS_ID = "main";
 export const DEFAULT_WHATSAPP_SETTINGS: Omit<WhatsappSettings, "id"> = {
   botEnabled: true,
   aiAutoReplyEnabled: true,
+  aiProvider: "openai",
   openaiModel: "gpt-4o-mini",
+  geminiModel: "gemini-2.0-flash",
   defaultLanguage: "ar",
   businessName: "",
   welcomeMessage: "",

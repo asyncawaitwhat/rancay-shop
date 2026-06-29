@@ -178,13 +178,37 @@ function WhatsappContent() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label={t("whatsapp.openaiModel")}>
-                <Input
-                  value={settings.openaiModel}
-                  onChange={(e) => set("openaiModel", e.target.value)}
-                  dir="ltr"
-                />
+              <Field label={t("whatsapp.aiProvider")}>
+                <Select
+                  value={settings.aiProvider}
+                  onValueChange={(v) => set("aiProvider", v as "openai" | "gemini")}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="openai">OpenAI (ChatGPT)</SelectItem>
+                    <SelectItem value="gemini">Google Gemini</SelectItem>
+                  </SelectContent>
+                </Select>
               </Field>
+              {settings.aiProvider === "gemini" ? (
+                <Field label={t("whatsapp.geminiModel")} hint={t("whatsapp.geminiKeyHint")}>
+                  <Input
+                    value={settings.geminiModel}
+                    onChange={(e) => set("geminiModel", e.target.value)}
+                    dir="ltr"
+                  />
+                </Field>
+              ) : (
+                <Field label={t("whatsapp.openaiModel")} hint={t("whatsapp.openaiKeyHint")}>
+                  <Input
+                    value={settings.openaiModel}
+                    onChange={(e) => set("openaiModel", e.target.value)}
+                    dir="ltr"
+                  />
+                </Field>
+              )}
               <Field label={t("whatsapp.defaultLanguage")}>
                 <Select
                   value={settings.defaultLanguage}

@@ -104,7 +104,7 @@ async function run() {
   console.log("[seed] Roles created.");
 
 
-  
+
   // -------- 2. Super admin auth user + profile --------
   const email = "admin@store.com";
   const password = "Admin@123456";
