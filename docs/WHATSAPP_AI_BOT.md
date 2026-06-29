@@ -126,6 +126,7 @@ Reuses existing ERP collections and adds bot-specific ones:
 | `whatsappSessions` | One per phone: language, status, active cart, history |
 | `whatsappMessages` | Every inbound/outbound message (dedup by id) |
 | `whatsappCarts` | Active/pending/invoiced/cancelled carts |
+| `whatsappLogs` | Durable event/error trail (webhook + bot), shown on the WhatsApp screen |
 | `whatsappSettings` | Bot config doc (`main`) |
 
 Deploy the updated rules:

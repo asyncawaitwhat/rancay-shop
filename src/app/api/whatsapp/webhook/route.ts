@@ -11,6 +11,7 @@
 import { getBotEnv, validateBotEnv } from "@/lib/server/env";
 import { verifyWebhookSignature, parseIncoming } from "@/lib/server/whatsapp/client";
 import { handleInboundMessage } from "@/lib/server/bot/handler";
+import { logInfo, logWarn, logError } from "@/lib/server/bot/logger";
 
 export const runtime = "edge";
 // Never cache webhook responses.
@@ -40,8 +41,9 @@ export async function POST(req: Request): Promise<Response> {
   // Configuration sanity check — log clearly but still 200 the webhook.
   const missing = validateBotEnv();
   if (missing.length) {
-    // eslint-disable-next-line no-console
-    console.error("[whatsapp] missing env vars:", missing.join(", "));
+    await logError("webhook", "Missing required env vars — cannot process", {
+      detail: missing.join(", "),
+    });
     return new Response("OK", { status: 200 });
   }
 
@@ -49,8 +51,9 @@ export async function POST(req: Request): Promise<Response> {
   const signature = req.headers.get("x-hub-signature-256");
   const valid = await verifyWebhookSignature(rawBody, signature);
   if (!valid) {
-    // eslint-disable-next-line no-console
-    console.warn("[whatsapp] invalid webhook signature — rejecting.");
+    await logWarn("webhook", "Rejected: invalid X-Hub-Signature-256", {
+      detail: signature ? "signature mismatch" : "no signature header",
+    });
     return new Response("Forbidden", { status: 403 });
   }
 
@@ -58,13 +61,14 @@ export async function POST(req: Request): Promise<Response> {
   try {
     payload = JSON.parse(rawBody);
   } catch {
+    await logWarn("webhook", "Rejected: body was not valid JSON");
     return new Response("OK", { status: 200 });
   }
 
   const messages = parseIncoming(payload);
-  // eslint-disable-next-line no-console
-  console.log(`[whatsapp] webhook POST received; ${messages.length} actionable message(s)`);
+  // Status callbacks (delivered/read) carry no actionable messages — skip quietly.
   if (!messages.length) return new Response("OK", { status: 200 });
+  await logInfo("webhook", `Received ${messages.length} message(s)`);
 
   const env = getBotEnv();
   const baseUrl = env.publicBaseUrl || new URL(req.url).origin;
@@ -74,8 +78,11 @@ export async function POST(req: Request): Promise<Response> {
     try {
       await handleInboundMessage(msg, baseUrl);
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error("[whatsapp] failed to handle message", msg.waMessageId, e);
+      await logError("webhook", "Unhandled error while handling message", {
+        phone: msg.from,
+        waMessageId: msg.waMessageId,
+        detail: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 

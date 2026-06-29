@@ -18,6 +18,7 @@ import type {
   WhatsappSettings,
   WhatsappSession,
   WhatsappMessage,
+  WhatsappLog,
 } from "../../types";
 import { logAudit, type AuditActor } from "./auditLogs";
 import { getIdToken } from "../auth";
@@ -113,6 +114,17 @@ export async function listMessagesForPhone(
     (a, b) =>
       (toDate(a.createdAt)?.getTime() || 0) - (toDate(b.createdAt)?.getTime() || 0)
   );
+}
+
+const LOGS_C = "whatsappLogs";
+
+/**
+ * Recent WhatsApp pipeline logs (newest first). Single-field orderBy is
+ * auto-indexed; level filtering is done by the caller in memory so no composite
+ * index is required.
+ */
+export async function listWhatsappLogs(max = 200): Promise<WhatsappLog[]> {
+  return listDocs<WhatsappLog>(LOGS_C, orderBy("createdAt", "desc"), limit(max));
 }
 
 /**

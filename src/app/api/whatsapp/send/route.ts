@@ -16,6 +16,7 @@ import { sendText, normalisePhone } from "@/lib/server/whatsapp/client";
 import { logOutbound } from "@/lib/server/bot/messages";
 import { adminGetDoc } from "@/lib/server/firestore-rest";
 import { setSessionStatus, touchSession } from "@/lib/server/bot/sessions";
+import { logInfo, logError } from "@/lib/server/bot/logger";
 import type { AppUser } from "@/lib/types";
 
 export const runtime = "edge";
@@ -76,8 +77,17 @@ export async function POST(req: Request): Promise<Response> {
     error: result.error,
   });
   if (!result.ok) {
+    await logError("send", "Manual staff message failed", {
+      phone,
+      detail: result.error,
+      context: { by: user.name },
+    });
     return json({ error: result.error || "WhatsApp send failed" }, 502);
   }
+  await logInfo("send", "Staff sent a manual message", {
+    phone,
+    context: { by: user.name, pausedAi: Boolean(body.pauseAi) },
+  });
 
   // 5. Optionally pause the AI so it doesn't also reply.
   if (body.pauseAi) {

@@ -63,6 +63,15 @@ export const dictionaries: Record<Lang, Record<string, string>> = {
     "whatsapp.noMessages": "No messages yet",
     "whatsapp.typeMessage": "Type a message…",
     "whatsapp.send2": "Send",
+    "whatsapp.logs": "Logs & error trail",
+    "whatsapp.noLogs": "No log entries yet",
+    "whatsapp.time": "Time",
+    "whatsapp.level": "Level",
+    "whatsapp.source": "Source",
+    "whatsapp.event": "Event",
+    "whatsapp.levelError": "Errors",
+    "whatsapp.levelWarn": "Warnings",
+    "whatsapp.levelInfo": "Info",
 
     // Sales reps
     "salesRep.title": "Sales Reps",
@@ -465,6 +474,15 @@ export const dictionaries: Record<Lang, Record<string, string>> = {
     "whatsapp.noMessages": "لا توجد رسائل بعد",
     "whatsapp.typeMessage": "اكتب رسالة…",
     "whatsapp.send2": "إرسال",
+    "whatsapp.logs": "السجلات وأثر الأخطاء",
+    "whatsapp.noLogs": "لا توجد سجلات بعد",
+    "whatsapp.time": "الوقت",
+    "whatsapp.level": "المستوى",
+    "whatsapp.source": "المصدر",
+    "whatsapp.event": "الحدث",
+    "whatsapp.levelError": "أخطاء",
+    "whatsapp.levelWarn": "تحذيرات",
+    "whatsapp.levelInfo": "معلومات",
 
     // Sales reps
     "salesRep.title": "مندوبو المبيعات",

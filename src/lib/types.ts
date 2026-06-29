@@ -430,6 +430,21 @@ export interface WhatsappCart {
   updatedAt?: DateLike;
 }
 
+export type WhatsappLogLevel = "info" | "warn" | "error";
+
+/** Persistent event/error trail for the WhatsApp pipeline (whatsappLogs). */
+export interface WhatsappLog {
+  id: string;
+  level: WhatsappLogLevel;
+  source: string; // webhook | handler | send | invoice | orchestrator | ...
+  message: string;
+  phone?: string;
+  waMessageId?: string;
+  detail?: string; // error text / extra detail
+  context?: string; // JSON-encoded structured context
+  createdAt?: DateLike;
+}
+
 export type AiProvider = "openai" | "gemini";
 
 /** Bot configuration document (whatsappSettings/main). */

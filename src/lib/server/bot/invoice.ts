@@ -25,6 +25,7 @@ import type { Product, WhatsappCart } from "../../types";
 import type { CustomerRef } from "./customers";
 import { getCart, markCartInvoiced } from "./cart";
 import { computeCartTotals } from "./cart";
+import { logInfo, logError } from "./logger";
 import type { WhatsappSettings } from "../../types";
 
 const INVOICES = "salesInvoices";
@@ -217,6 +218,11 @@ export async function createInvoiceFromCart(params: {
     });
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);
+    await logError("invoice", "Invoice creation failed — no stock deducted", {
+      phone: params.phone,
+      detail: error,
+      context: { cartId: params.cartId, items: cart.items.length },
+    });
     return { ok: false, error };
   }
 
@@ -226,6 +232,14 @@ export async function createInvoiceFromCart(params: {
     action: "post",
     entityId: invoiceNumber,
     description: `WhatsApp invoice ${invoiceNumber} for ${params.phone} (total ${totals.grandTotal})`,
+  });
+  await logInfo("invoice", `Invoice ${invoiceNumber} created`, {
+    phone: params.phone,
+    context: {
+      invoiceNumber,
+      grandTotal: totals.grandTotal,
+      items: cart.items.length,
+    },
   });
 
   return {

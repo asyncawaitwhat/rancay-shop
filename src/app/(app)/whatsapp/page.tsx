@@ -33,7 +33,12 @@ import { useLang } from "@/components/providers/language-provider";
 import { useAuth } from "@/components/providers/auth-provider";
 import { usePermissions } from "@/components/providers/permission-provider";
 import { formatDateTime } from "@/lib/utils";
-import type { WhatsappSettings, WhatsappSession, WhatsappMessage } from "@/lib/types";
+import type {
+  WhatsappSettings,
+  WhatsappSession,
+  WhatsappMessage,
+  WhatsappLog,
+} from "@/lib/types";
 import {
   getWhatsappSettings,
   saveWhatsappSettings,
@@ -42,6 +47,7 @@ import {
   pauseSession,
   listMessagesForPhone,
   sendWhatsappMessage,
+  listWhatsappLogs,
   DEFAULT_WHATSAPP_SETTINGS,
 } from "@/lib/firebase/services/whatsapp";
 
@@ -67,19 +73,27 @@ function WhatsappContent() {
   const [sessions, setSessions] = useState<WhatsappSession[]>([]);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [openSession, setOpenSession] = useState<WhatsappSession | null>(null);
+  const [logs, setLogs] = useState<WhatsappLog[]>([]);
+  const [logLevel, setLogLevel] = useState("all");
 
   const readOnly = !can("whatsapp", "edit");
 
   async function load() {
-    const [s, sess] = await Promise.all([
+    const [s, sess, lg] = await Promise.all([
       getWhatsappSettings(),
       listRecentSessions(50).catch(() => [] as WhatsappSession[]),
+      listWhatsappLogs(200).catch(() => [] as WhatsappLog[]),
     ]);
     const { id, updatedAt, ...rest } = s;
     void id;
     void updatedAt;
     setSettings(rest);
     setSessions(sess);
+    setLogs(lg);
+  }
+
+  async function reloadLogs() {
+    setLogs(await listWhatsappLogs(200).catch(() => [] as WhatsappLog[]));
   }
 
   useEffect(() => {
@@ -333,6 +347,85 @@ function WhatsappContent() {
               </TableBody>
             </Table>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex flex-wrap items-center justify-between gap-2">
+            <span>{t("whatsapp.logs")}</span>
+            <span className="flex items-center gap-2">
+              <Select value={logLevel} onValueChange={setLogLevel}>
+                <SelectTrigger className="h-8 w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("common.all")}</SelectItem>
+                  <SelectItem value="error">{t("whatsapp.levelError")}</SelectItem>
+                  <SelectItem value="warn">{t("whatsapp.levelWarn")}</SelectItem>
+                  <SelectItem value="info">{t("whatsapp.levelInfo")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" size="sm" onClick={reloadLogs}>
+                <RefreshCw className="h-3.5 w-3.5" /> {t("action.refresh")}
+              </Button>
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(() => {
+            const filtered =
+              logLevel === "all" ? logs : logs.filter((l) => l.level === logLevel);
+            if (filtered.length === 0) return <EmptyState title={t("whatsapp.noLogs")} />;
+            return (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("whatsapp.time")}</TableHead>
+                    <TableHead>{t("whatsapp.level")}</TableHead>
+                    <TableHead>{t("whatsapp.source")}</TableHead>
+                    <TableHead>{t("whatsapp.event")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        {formatDateTime(l.createdAt)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            l.level === "error"
+                              ? "destructive"
+                              : l.level === "warn"
+                                ? "warning"
+                                : "secondary"
+                          }
+                        >
+                          {l.level}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs font-mono">{l.source}</TableCell>
+                      <TableCell className="text-xs">
+                        <span className="block">{l.message}</span>
+                        {l.detail ? (
+                          <span className="block text-destructive">{l.detail}</span>
+                        ) : null}
+                        {(l.phone || l.context) ? (
+                          <span className="block text-muted-foreground" dir="ltr">
+                            {l.phone ? l.phone : ""}
+                            {l.phone && l.context ? " • " : ""}
+                            {l.context || ""}
+                          </span>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            );
+          })()}
         </CardContent>
       </Card>
 
