@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, RefreshCw, MessageCircle } from "lucide-react";
+import { Save, RefreshCw, MessageCircle, Send, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -32,12 +33,15 @@ import { useLang } from "@/components/providers/language-provider";
 import { useAuth } from "@/components/providers/auth-provider";
 import { usePermissions } from "@/components/providers/permission-provider";
 import { formatDateTime } from "@/lib/utils";
-import type { WhatsappSettings, WhatsappSession } from "@/lib/types";
+import type { WhatsappSettings, WhatsappSession, WhatsappMessage } from "@/lib/types";
 import {
   getWhatsappSettings,
   saveWhatsappSettings,
   listRecentSessions,
   reactivateSession,
+  pauseSession,
+  listMessagesForPhone,
+  sendWhatsappMessage,
   DEFAULT_WHATSAPP_SETTINGS,
 } from "@/lib/firebase/services/whatsapp";
 
@@ -62,6 +66,7 @@ function WhatsappContent() {
   });
   const [sessions, setSessions] = useState<WhatsappSession[]>([]);
   const [webhookUrl, setWebhookUrl] = useState("");
+  const [openSession, setOpenSession] = useState<WhatsappSession | null>(null);
 
   const readOnly = !can("whatsapp", "edit");
 
@@ -278,16 +283,26 @@ function WhatsappContent() {
                       {formatDateTime(s.lastMessageAt)}
                     </TableCell>
                     <TableCell className="text-end">
-                      {s.status === "human_handoff" && !readOnly && (
+                      <div className="flex justify-end gap-1">
+                        {s.status === "human_handoff" && !readOnly && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onReactivate(s.phone)}
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />{" "}
+                            {t("whatsapp.reactivate")}
+                          </Button>
+                        )}
                         <Button
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
-                          onClick={() => onReactivate(s.phone)}
+                          onClick={() => setOpenSession(s)}
                         >
-                          <RefreshCw className="h-3.5 w-3.5" />{" "}
-                          {t("whatsapp.reactivate")}
+                          <MessageCircle className="h-3.5 w-3.5" />{" "}
+                          {t("whatsapp.openChat")}
                         </Button>
-                      )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -296,6 +311,167 @@ function WhatsappContent() {
           )}
         </CardContent>
       </Card>
+
+      {openSession && (
+        <ConversationDialog
+          session={openSession}
+          readOnly={readOnly}
+          actor={actor}
+          onClose={() => setOpenSession(null)}
+          onChanged={load}
+        />
+      )}
     </div>
+  );
+}
+
+function ConversationDialog({
+  session,
+  readOnly,
+  actor,
+  onClose,
+  onChanged,
+}: {
+  session: WhatsappSession;
+  readOnly: boolean;
+  actor: ReturnType<typeof useAuth>["actor"];
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const { t } = useLang();
+  const [messages, setMessages] = useState<WhatsappMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [status, setStatus] = useState(session.status);
+
+  async function loadMessages() {
+    setLoading(true);
+    try {
+      setMessages(await listMessagesForPhone(session.phone));
+    } catch (e) {
+      toast({ variant: "destructive", title: t("msg.error"), description: (e as Error).message });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadMessages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.phone]);
+
+  async function onSend() {
+    const body = text.trim();
+    if (!body) return;
+    setSending(true);
+    try {
+      await sendWhatsappMessage(session.phone, body);
+      setText("");
+      await loadMessages();
+    } catch (e) {
+      toast({ variant: "destructive", title: t("msg.error"), description: (e as Error).message });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function toggleAi() {
+    try {
+      if (status === "human_handoff") {
+        await reactivateSession(session.phone, actor);
+        setStatus("active");
+      } else {
+        await pauseSession(session.phone, actor);
+        setStatus("human_handoff");
+      }
+      onChanged();
+    } catch (e) {
+      toast({ variant: "destructive", title: t("msg.error"), description: (e as Error).message });
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex flex-wrap items-center gap-2">
+            <span dir="ltr" className="font-mono text-sm">{session.phone}</span>
+            {session.profileName && (
+              <span className="text-sm text-muted-foreground">{session.profileName}</span>
+            )}
+            {status === "human_handoff" ? (
+              <Badge variant="destructive">{t("whatsapp.handoff")}</Badge>
+            ) : (
+              <Badge variant="secondary">{t("whatsapp.active")}</Badge>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex items-center justify-between gap-2">
+          {!readOnly ? (
+            <Button variant="outline" size="sm" onClick={toggleAi}>
+              {status === "human_handoff" ? (
+                <><Play className="h-3.5 w-3.5" /> {t("whatsapp.reactivate")}</>
+              ) : (
+                <><Pause className="h-3.5 w-3.5" /> {t("whatsapp.pauseAi")}</>
+              )}
+            </Button>
+          ) : <span />}
+          <Button variant="ghost" size="sm" onClick={loadMessages}>
+            <RefreshCw className="h-3.5 w-3.5" /> {t("action.refresh")}
+          </Button>
+        </div>
+
+        <div className="h-72 space-y-2 overflow-y-auto rounded-md border bg-muted/30 p-3">
+          {loading ? (
+            <LoadingState />
+          ) : messages.length === 0 ? (
+            <EmptyState title={t("whatsapp.noMessages")} />
+          ) : (
+            messages.map((m) => (
+              <div
+                key={m.id}
+                className={`flex ${m.direction === "incoming" ? "justify-start" : "justify-end"}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                    m.direction === "incoming"
+                      ? "bg-background"
+                      : "bg-primary text-primary-foreground"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap break-words">{m.text || `[${m.type}]`}</p>
+                  <p className={`mt-1 text-[10px] ${m.direction === "incoming" ? "text-muted-foreground" : "opacity-80"}`}>
+                    {formatDateTime(m.createdAt)}
+                    {m.error ? ` • ${m.error}` : ""}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {!readOnly && (
+          <div className="flex items-end gap-2">
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={t("whatsapp.typeMessage")}
+              rows={2}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  onSend();
+                }
+              }}
+            />
+            <Button onClick={onSend} disabled={sending || !text.trim()}>
+              <Send className="h-4 w-4" /> {t("whatsapp.send2")}
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

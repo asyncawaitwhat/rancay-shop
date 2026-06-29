@@ -252,6 +252,21 @@ export async function adminGetDoc<T>(
   return docToObject<T>(doc);
 }
 
+/**
+ * Verify the service-account credentials work end-to-end: obtain an OAuth token
+ * and perform a trivial read. A 404 (missing doc) counts as success — it proves
+ * auth + project access; only 401/403/network errors fail.
+ */
+export async function adminHealthCheck(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await getAccessToken();
+    await api(`${basePath()}/__diagnostics__/__none__`);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 export interface QueryFilter {
   field: string;
   op:

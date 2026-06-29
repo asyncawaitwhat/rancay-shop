@@ -36,17 +36,25 @@ export async function handleInboundMessage(
   msg: ParsedMessage,
   baseUrl: string
 ): Promise<void> {
-  // 1. Idempotency — claim the message id; bail on duplicates.
-  const isNew = await claimInboundMessage({
-    waMessageId: msg.waMessageId,
-    phone: msg.from,
-    type: msg.type,
-    text: msg.text,
-    raw: msg.raw,
-  });
-  if (!isNew) return;
-
+  // eslint-disable-next-line no-console
+  console.log(`[whatsapp] inbound ${msg.type} from ${msg.from} (${msg.waMessageId})`);
   try {
+    // 1. Idempotency — claim the message id; bail on duplicates. This is the
+    //    FIRST Firestore call, so an auth/config failure surfaces here and we
+    //    still try to send a fallback below instead of going silent.
+    const isNew = await claimInboundMessage({
+      waMessageId: msg.waMessageId,
+      phone: msg.from,
+      type: msg.type,
+      text: msg.text,
+      raw: msg.raw,
+    });
+    if (!isNew) {
+      // eslint-disable-next-line no-console
+      console.log(`[whatsapp] duplicate ${msg.waMessageId} — skipping`);
+      return;
+    }
+
     const settings = await getWhatsappSettings();
     const language = detectLanguage(msg.text, settings.defaultLanguage);
 
@@ -134,6 +142,10 @@ export async function handleInboundMessage(
     } catch {
       /* ignore secondary failures */
     }
-    await markProcessed(msg.waMessageId, error);
+    try {
+      await markProcessed(msg.waMessageId, error);
+    } catch {
+      /* the message doc may not exist if the first write failed */
+    }
   }
 }

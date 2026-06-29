@@ -12,9 +12,16 @@ import {
   listDocs,
   orderBy,
   limit,
+  where,
 } from "../firestore";
-import type { WhatsappSettings, WhatsappSession } from "../../types";
+import type {
+  WhatsappSettings,
+  WhatsappSession,
+  WhatsappMessage,
+} from "../../types";
 import { logAudit, type AuditActor } from "./auditLogs";
+import { getIdToken } from "../auth";
+import { toDate } from "../../utils";
 
 const SETTINGS_C = "whatsappSettings";
 const SESSIONS_C = "whatsappSessions";
@@ -71,4 +78,62 @@ export async function reactivateSession(
     entityId: phone,
     description: `Resumed AI for ${phone}`,
   });
+}
+
+/** Pause AI auto-replies (human takes over) for a customer. */
+export async function pauseSession(
+  phone: string,
+  actor: AuditActor | null
+): Promise<void> {
+  await updateOne(SESSIONS_C, phone, { status: "human_handoff" });
+  await logAudit(actor, {
+    action: "update",
+    entityType: "whatsappSession",
+    entityId: phone,
+    description: `Paused AI (human handoff) for ${phone}`,
+  });
+}
+
+const MESSAGES_C = "whatsappMessages";
+
+/**
+ * Full message log for one phone number, oldest first. Uses an equality query
+ * (no composite index needed) and sorts in memory.
+ */
+export async function listMessagesForPhone(
+  phone: string
+): Promise<WhatsappMessage[]> {
+  const msgs = await listDocs<WhatsappMessage>(
+    MESSAGES_C,
+    where("phone", "==", phone)
+  );
+  return msgs.sort(
+    (a, b) =>
+      (toDate(a.createdAt)?.getTime() || 0) - (toDate(b.createdAt)?.getTime() || 0)
+  );
+}
+
+/**
+ * Send a WhatsApp message to a customer from the ERP. Goes through the secure
+ * server route (the WhatsApp token is server-only), authenticated with the
+ * current user's Firebase ID token.
+ */
+export async function sendWhatsappMessage(
+  phone: string,
+  text: string,
+  pauseAi = false
+): Promise<void> {
+  const token = await getIdToken();
+  const res = await fetch("/api/whatsapp/send", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ phone, text, pauseAi }),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error || `Send failed (HTTP ${res.status})`);
+  }
 }

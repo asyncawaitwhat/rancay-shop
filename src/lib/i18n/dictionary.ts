@@ -54,6 +54,11 @@ export const dictionaries: Record<Lang, Record<string, string>> = {
     "whatsapp.active": "Active",
     "whatsapp.noSessions": "No conversations yet",
     "whatsapp.webhookHint": "Webhook URL (set this in Meta → WhatsApp → Configuration):",
+    "whatsapp.openChat": "Open chat",
+    "whatsapp.pauseAi": "Pause AI",
+    "whatsapp.noMessages": "No messages yet",
+    "whatsapp.typeMessage": "Type a message…",
+    "whatsapp.send2": "Send",
 
     // Sales reps
     "salesRep.title": "Sales Reps",
@@ -447,6 +452,11 @@ export const dictionaries: Record<Lang, Record<string, string>> = {
     "whatsapp.active": "نشط",
     "whatsapp.noSessions": "لا توجد محادثات بعد",
     "whatsapp.webhookHint": "رابط الـ Webhook (ضعه في Meta ← WhatsApp ← Configuration):",
+    "whatsapp.openChat": "فتح المحادثة",
+    "whatsapp.pauseAi": "إيقاف الذكاء الاصطناعي",
+    "whatsapp.noMessages": "لا توجد رسائل بعد",
+    "whatsapp.typeMessage": "اكتب رسالة…",
+    "whatsapp.send2": "إرسال",
 
     // Sales reps
     "salesRep.title": "مندوبو المبيعات",

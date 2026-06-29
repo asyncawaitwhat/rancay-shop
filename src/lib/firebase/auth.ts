@@ -36,6 +36,13 @@ export async function signOut() {
   await fbSignOut(getFirebaseAuth());
 }
 
+/** Current user's Firebase ID token, for authenticating calls to server routes. */
+export async function getIdToken(): Promise<string> {
+  const user = getFirebaseAuth().currentUser;
+  if (!user) throw new Error("Not signed in.");
+  return user.getIdToken();
+}
+
 export function watchAuth(cb: (user: FirebaseUser | null) => void) {
   return onAuthStateChanged(getFirebaseAuth(), cb);
 }

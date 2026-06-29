@@ -62,6 +62,8 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const messages = parseIncoming(payload);
+  // eslint-disable-next-line no-console
+  console.log(`[whatsapp] webhook POST received; ${messages.length} actionable message(s)`);
   if (!messages.length) return new Response("OK", { status: 200 });
 
   const env = getBotEnv();
